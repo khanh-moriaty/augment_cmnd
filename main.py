@@ -9,10 +9,6 @@ import xml.etree.ElementTree as ET
 import xml.dom.minidom
 from multiprocessing import Pool
 
-INP_DIR = '/dataset/crawl/front_cmtnd_resized/'
-OUT_DIR = '/dataset/augmented/front_cmtnd_resized/'
-BGS_DIR = '/dataset/bg/'
-
 def generate_bubble(img,
     radius=100,
     max_alpha=255,
@@ -185,38 +181,48 @@ def augment(inp_img_path, inp_label_path, out_img_path, out_label_path, seed):
     cv2.imwrite(out_img_path, img)
     save_label(img, label, bbox, out_label_path)
 
-# random.seed(42)
-dir = os.path.join(INP_DIR, 'label')
-dir = os.listdir(dir)
-dir.sort()
-
 inp_img = []
 inp_label = []
 out_img = []
 out_label = []
 seeds = []
 
-fn = lambda fi, seed: os.path.splitext(fi)[0] + '.' + str(seed)
-_fn = lambda fi, seed: os.path.splitext(fi)[0]
-for fi in dir:
-    for seed in range(5):
-        inp_img.append(os.path.join(INP_DIR, 'image', _fn(fi, seed) + '.jpg'))
-        inp_label.append(os.path.join(INP_DIR, 'label', _fn(fi, seed) + '.xml'))
-        out_img.append(os.path.join(OUT_DIR, 'image', fn(fi, seed) + '.jpg'))
-        out_label.append(os.path.join(OUT_DIR, 'label', fn(fi, seed) + '.xml'))
-        seeds.append(seed)
+
+INP_DIR_LIST = [
+    '/dataset/crawl/front_cmtnd_resized/',
+    '/dataset/crawl/back_cmtnd_resized/',
+    '/dataset/crawl/front_cccd_resized/',
+    '/dataset/crawl/back_cccd_resized/',
+    '/dataset/crawl/hc_resized/',
+]
+
+OUT_DIR_LIST = [
+    '/dataset/augmented/front_cmtnd_resized/',
+    '/dataset/augmented/back_cmtnd_resized/',
+    '/dataset/augmented/front_cccd_resized/',
+    '/dataset/augmented/back_cccd_resized/',
+    '/dataset/augmented/hc_resized/',
+]
+
+BGS_DIR = '/dataset/bg/'
+
+for INP_DIR, OUT_DIR in zip(INP_DIR_LIST, OUT_DIR_LIST):
+    dir = os.path.join(INP_DIR, 'label')
+    dir = os.listdir(dir)
+    dir.sort()
+
+    fn = lambda fi, seed: os.path.splitext(fi)[0] + '.' + str(seed)
+    _fn = lambda fi, seed: os.path.splitext(fi)[0]
+    for fi in dir:
+        for seed in range(5):
+            inp_img.append(os.path.join(INP_DIR, 'image', _fn(fi, seed) + '.jpg'))
+            inp_label.append(os.path.join(INP_DIR, 'label', _fn(fi, seed) + '.xml'))
+            out_img.append(os.path.join(OUT_DIR, 'image', fn(fi, seed) + '.jpg'))
+            out_label.append(os.path.join(OUT_DIR, 'label', fn(fi, seed) + '.xml'))
+            seeds.append(seed)
 
 print(len(inp_img))
 t = time.time()
 with Pool(100) as pool:
     pool.starmap(augment, zip(inp_img, inp_label, out_img, out_label, seeds))
 print(time.time() - t)
-
-# with Pool(5) as pool:
-#     img = lambda fi: os.path.splitext(fi)[0] + '.jpg'
-#     inp_img = lambda fi: os.path.join(INP_DIR, 'image', img(fi))
-#     inp_label = lambda fi: os.path.join(INP_DIR, 'label', fi)
-#     out_img = lambda fi: os.path.join(OUT_DIR, 'image', img(fi))
-#     out_label = lambda fi: os.path.join(OUT_DIR, 'label', fi)
-#     dir = dir[:10]
-#     pool.starmap(augment, zip(map(inp_img, dir), map(inp_label, dir), map(out_img, dir), map(out_label, dir)))
